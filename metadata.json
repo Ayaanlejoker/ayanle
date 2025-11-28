@@ -1,0 +1,5 @@
+{
+  "name": "DhisePHP AI",
+  "description": "An AI-powered assistant that generates complete, secure, and structured PHP + MySQL projects based on user ideas.",
+  "requestFramePermissions": []
+}
