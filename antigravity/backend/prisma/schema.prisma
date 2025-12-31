@@ -1,0 +1,116 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  INSTRUCTOR
+  STUDENT
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum PaymentProvider {
+  STRIPE
+  PAYPAL
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  name      String?
+  role      Role     @default(STUDENT)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  instructedCourses Course[]     @relation("InstructorCourses")
+  enrollments       Enrollment[]
+  payments          Payment[]
+}
+
+model Course {
+  id           Int      @id @default(autoincrement())
+  title        String
+  description  String?  @db.Text
+  price        Decimal  @default(0.0) @db.Decimal(10, 2)
+  instructorId Int
+  instructor   User     @relation("InstructorCourses", fields: [instructorId], references: [id])
+  isPublished  Boolean  @default(false)
+  thumbnailUrl String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  lessons     Lesson[]
+  exams       Exam[]
+  enrollments Enrollment[]
+  payments    Payment[]
+}
+
+model Lesson {
+  id        Int      @id @default(autoincrement())
+  title     String
+  content   String?  @db.Text
+  videoUrl  String?
+  order     Int
+  courseId  Int
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Exam {
+  id        Int      @id @default(autoincrement())
+  title     String
+  courseId  Int
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  questions Question[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Question {
+  id      Int    @id @default(autoincrement())
+  text    String @db.Text
+  options Json   // Stored as JSON array: ["Option A", "Option B", ...]
+  answer  String // Correct answer value or index
+  examId  Int
+  exam    Exam   @relation(fields: [examId], references: [id], onDelete: Cascade)
+}
+
+model Enrollment {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  courseId  Int
+  course    Course   @relation(fields: [courseId], references: [id])
+  progress  Float    @default(0.0)
+  completed Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, courseId])
+}
+
+model Payment {
+  id            Int             @id @default(autoincrement())
+  userId        Int
+  user          User            @relation(fields: [userId], references: [id])
+  courseId      Int
+  course        Course          @relation(fields: [courseId], references: [id])
+  amount        Decimal         @db.Decimal(10, 2)
+  status        PaymentStatus   @default(PENDING)
+  provider      PaymentProvider
+  transactionId String?
+  createdAt     DateTime        @default(now())
+}
